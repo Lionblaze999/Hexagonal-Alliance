@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#edf1e9">
+  <title>Hexagonal Alliance</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{--paper:#edf1e9;--ink:#17251f;--muted:#758179;--line:#d5ddd3;--green:#376e58;--white:#fafbf8;--mono:"DM Mono",monospace;--sans:"DM Sans",sans-serif;--display:"Space Grotesk",sans-serif}
+    *{box-sizing:border-box}body{margin:0;min-width:320px;background:var(--paper);color:var(--ink);font:14px/1.45 var(--sans)}button,select{font:inherit;color:inherit}button{cursor:pointer}
+    .shell{max-width:1460px;margin:auto;padding:0 32px 32px}.top{height:70px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)}.brand{display:flex;align-items:center;gap:12px;font:600 16px var(--display)}.brand svg{width:26px;color:var(--green)}.live{font:10px var(--mono);letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}.live i{display:inline-block;width:7px;height:7px;border-radius:50%;background:#4a9b70;margin-right:8px}
+    main{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:30px;padding-top:24px}.board{min-width:0}.heading{display:flex;justify-content:space-between;align-items:end;padding-bottom:15px}.eyebrow,.meta{font:10px var(--mono);text-transform:uppercase;color:var(--muted)}h1{font:600 25px/1.15 var(--display);margin:4px 0 0}.meta{white-space:nowrap}
+    .map-frame{position:relative;background:#e1e9e1;border:1px solid var(--line)}#map{display:block;width:100%;aspect-ratio:700/610}.tile{stroke:#e1e9e1;stroke-width:1.4;transition:opacity .15s,filter .15s}.tile.range{stroke:#17251f;stroke-width:2.5}.tile.disabled{opacity:.6}.tile.target{cursor:pointer}.tile.target:hover{filter:brightness(1.13);stroke:#17251f;stroke-width:2.5}.commander{fill:#fffdf6;stroke:#17251f;stroke-width:1.8}.commander-mark{fill:#17251f}.capital{fill:#fffdf6;stroke:#17251f;stroke-width:1.4}.map-note{position:absolute;left:12px;bottom:9px;color:#52635a;font:9px var(--mono);pointer-events:none}.legend{display:flex;flex-wrap:wrap;gap:10px 15px;padding:12px 0}.legend-item{display:flex;align-items:center;gap:7px;font-size:10px;color:#58645d}.swatch{width:9px;height:9px;border-radius:2px;flex:none}
+    aside{border-left:1px solid var(--line);padding-left:22px}.country-label{display:flex;align-items:center;gap:9px;margin-top:8px}.country-dot{width:10px;height:10px;border-radius:50%;flex:none}.country-select{width:100%;padding:10px;border:1px solid var(--line);border-radius:0;background:var(--white);font:600 14px var(--display)}.resource{display:flex;align-items:center;justify-content:space-between;margin-top:20px;padding:16px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}.resource-title{font:600 12px var(--display)}.resource-sub{font-size:10px;color:var(--muted);margin-top:3px}.points{font:600 29px var(--display)}.points b{display:inline-block;width:10px;height:10px;margin:0 6px 2px 0;border-radius:50%;background:#d1a649;box-shadow:inset 0 0 0 2px #b58b37}.award{display:flex;justify-content:space-between;padding-top:11px;color:var(--muted);font:9px var(--mono)}.award span:last-child{color:var(--ink)}
+    .section{margin-top:22px}.section-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px;font:600 12px var(--display)}.section-title span{font:9px var(--mono);color:var(--muted)}.actions{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.action{height:61px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;background:transparent;border:1px solid var(--line);border-radius:0;color:#58645d;font:10px var(--mono);transition:.15s}.action svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}.action.active{background:var(--green);border-color:var(--green);color:white}.action:hover:not(:disabled){border-color:#87968b}.action:disabled{opacity:.42;cursor:not-allowed}.instruction{min-height:32px;margin:9px 0 0;color:var(--muted);font-size:10px}
+    .standing{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:9px;align-items:center;padding:8px 0;border-top:1px solid #dce1d9;font-size:10px}.standing-name{display:flex;align-items:center;gap:7px;min-width:0}.standing-name span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.territory,.balance{font:9px var(--mono);color:var(--muted);white-space:nowrap}.dispatch{border-top:1px solid #dce1d9}.event{display:grid;grid-template-columns:36px 1fr;gap:7px;padding:8px 0;border-bottom:1px solid #dce1d9;color:#58645d;font-size:10px}.event time{font:9px var(--mono);color:#8a938c}.event strong{color:var(--ink)}.rules{margin-top:16px;color:#818c84;font:9px/1.6 var(--mono)}.toast{position:fixed;left:50%;bottom:22px;z-index:5;padding:10px 14px;background:var(--ink);color:white;font-size:12px;opacity:0;transform:translate(-50%,10px);transition:.2s;pointer-events:none}.toast.show{opacity:1;transform:translate(-50%,0)}.game-over{position:fixed;inset:0;z-index:4;display:none;place-items:center;padding:20px;background:#17251fe8}.game-over.show{display:grid}.result{width:min(420px,100%);padding:28px;background:var(--paper);text-align:center}.result .eyebrow{margin-bottom:8px}.result h2{font:600 26px var(--display);margin:0 0 12px}.result p{margin:0 0 20px;color:#58645d}.restart{padding:10px 15px;border:0;background:var(--green);color:white;font:11px var(--mono)}
+    @media(max-width:900px){.shell{padding-inline:20px}.layout,main{grid-template-columns:minmax(0,1fr) 260px;gap:20px}aside{padding-left:16px}}
+    @media(max-width:680px){.shell{padding:0 13px 22px}.top{height:58px}.brand{font-size:13px}.layout,main{grid-template-columns:1fr;gap:20px;padding-top:15px}.heading{padding-bottom:10px}h1{font-size:21px}aside{display:grid;grid-template-columns:1fr 1fr;gap:0 14px;border:0;border-top:1px solid var(--line);padding:17px 0 0}.identity,.resource,.award,.actions-section,.section:last-of-type,.rules{grid-column:1/-1}.section{margin-top:18px}.legend{gap:8px 12px}.legend-item{font-size:9px}.map-note{font-size:8px;left:7px;bottom:6px}}
+    @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important}}
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="top">
+      <div class="brand"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M9 4h14l7 12-7 12H9L2 16Z" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m9 4 7 12-7 12m14-24-7 12 7 12M2 16h28" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>HEXAGONAL ALLIANCE</div>
+      <div class="live"><i></i>Live world</div>
+    </header>
+    <main>
+      <section class="board" aria-label="Game map">
+        <div class="heading"><div><div class="eyebrow">The known world · 400 territories</div><h1>A world without turns.</h1></div><div class="meta">20 × 20 HEX GRID</div></div>
+        <div class="map-frame"><svg id="map" viewBox="0 0 700 610" role="img" aria-label="Interactive map of 400 hexagonal territories"></svg><div class="map-note" id="map-note">Choose an action, then a territory.</div></div>
+        <div class="legend" id="legend" aria-label="Country key"></div>
+      </section>
+      <aside aria-label="Country controls and game status">
+        <div class="identity"><div class="eyebrow">You are leading</div><label class="country-label"><span class="country-dot" id="country-dot"></span><select id="country-select" class="country-select" aria-label="Choose your country"></select></label></div>
+        <div class="resource"><div><div class="resource-title">Action points</div><div class="resource-sub">Spend one to act, or hold.</div></div><div class="points"><b></b><span id="points">1</span></div></div>
+        <div class="award"><span>NEXT POINT · LOCAL 5 PM</span><span id="countdown">--:--:--</span></div>
+        <section class="section actions-section"><div class="section-title">Choose an action <span>1 PT EACH</span></div>
+          <div class="actions" role="group" aria-label="Choose an action">
+            <button class="action" data-action="attack" aria-pressed="false" title="Attack a rival within two hexes"><svg viewBox="0 0 24 24"><path d="M5 19 18.5 5.5M14 5.5h4.5V10M4 13v6h6"/></svg>Attack</button>
+            <button class="action" data-action="move" aria-pressed="false" title="Move your commander one hex"><svg viewBox="0 0 24 24"><path d="M12 3v18M3 12h18m-9-9-3 3m3-3 3 3m-3 15-3-3m3 3 3-3M3 12l3-3m-3 3 3 3m12-3 3-3m-3 3 3 3"/></svg>Move</button>
+            <button class="action" data-action="give" aria-pressed="false" title="Give a point to a nearby country"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Give</button>
+          </div><p class="instruction" id="instruction">Choose Attack, Move, or Give. Unspent points stay yours.</p>
+        </section>
+        <section class="section"><div class="section-title">Countries <span>LIVE STATUS</span></div><div id="standings"></div></section>
+        <section class="section"><div class="section-title">Dispatches <span id="local-time">--:--</span></div><div class="dispatch" id="dispatch"></div></section>
+        <div class="rules">One point arrives at 5 PM local time, daily.<br>The last country with land wins.</div>
+      </aside>
+    </main>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div id="game-over" class="game-over" role="dialog" aria-modal="true"><div class="result"><div class="eyebrow">The world is decided</div><h2 id="result-title">Victory</h2><p id="result-copy"></p><button class="restart" id="restart">START A NEW WORLD</button></div></div>
+  <script>
+    (() => {
+      const STORAGE = "hexagonal-alliance-v1", W = 20, H = 20, SIZE = 19;
+      const countries = [
+        { id: "portugal", name: "Portugal", home: [2, 3], color: "#39765d" },
+        { id: "japan", name: "Japan", home: [16, 3], color: "#d36d59" },
+        { id: "iceland", name: "Iceland", home: [2, 16], color: "#5577a6" },
+        { id: "kenya", name: "Kenya", home: [16, 16], color: "#c3973f" },
+        { id: "canada", name: "Canada", home: [9, 9], color: "#8a6c9c" }
+      ];
+      const instructions = {
+        attack: "Choose a rival territory within 2 hexes of your commander.",
+        move: "Choose your territory one hex from your commander.",
+        give: "Choose a country whose commander is within 2 hexes."
+      };
+      const key = (q, r) => `${q},${r}`;
+      const nation = id => countries.find(item => item.id === id);
+      const dateKey = date => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
+      const dist = (a,b) => { const aq=a[0]-Math.floor(a[1]/2), ar=a[1], bq=b[0]-Math.floor(b[1]/2), br=b[1], dq=aq-bq, dr=ar-br; return (Math.abs(dq)+Math.abs(dr)+Math.abs(dq+dr))/2; };
+      const fresh = () => ({ selected:"japan", hasActed:false, points:Object.fromEntries(countries.map(c=>[c.id,1])), units:Object.fromEntries(countries.map(c=>[c.id,[...c.home]])), owners:{}, lastAward:new Date().getHours()<17?dateKey(new Date()):"", events:[{time:"NOW",html:"The alliance is founded. Five countries enter the world."}] });
+      let state;
+      try { state=JSON.parse(localStorage.getItem(STORAGE)); } catch { state=null; }
+      if (!state || !state.owners || !state.points || !state.units) state=fresh();
+      let action=null, toastTimer;
+      const map=document.querySelector("#map"), select=document.querySelector("#country-select");
+      const persist=()=>localStorage.setItem(STORAGE,JSON.stringify(state));
+      const count=id=>Object.values(state.owners).filter(owner=>owner===id).length;
+
+      function world(){
+        for(let r=0;r<H;r++) for(let q=0;q<W;q++) if(state.owners[key(q,r)]===undefined){
+          let selected=countries[0], best=Infinity;
+          for(let i=0;i<countries.length;i++){const c=countries[i], noise=Math.sin(q*7.31+r*2.17+i*11.4)*.8, value=dist([q,r],c.home)+noise;if(value<best){best=value;selected=c;}}
+          state.owners[key(q,r)]=selected.id;
+        }
+        persist();
+      }
+      const center=(q,r)=>[26+q*SIZE*1.72+(r%2)*SIZE*.86,23+r*SIZE*1.5];
+      const points=(x,y)=>Array.from({length:6},(_,i)=>{const a=Math.PI/3*i;return `${(x+SIZE*Math.cos(a)).toFixed(2)},${(y+SIZE*Math.sin(a)).toFixed(2)}`;}).join(" ");
+
+      function drawMap(){
+        let out="";
+        for(let r=0;r<H;r++) for(let q=0;q<W;q++){
+          const owner=state.owners[key(q,r)], c=nation(owner), at=[q,r], pos=center(q,r), unit=state.units[state.selected], range=dist(unit,at)<=2;
+          const move=action==="move"&&owner===state.selected&&dist(unit,at)===1;
+          const attack=action==="attack"&&owner!==state.selected&&range;
+          const give=action==="give"&&owner!==state.selected&&state.units[owner]&&dist(unit,state.units[owner])<=2;
+          const target=move||attack||give;
+          out+=`<polygon class="tile ${range&&action?"range":""} ${action&&!target?"disabled":""} ${target?"target":""}" points="${points(...pos)}" fill="${c?.color||"#dfe7df"}" data-q="${q}" data-r="${r}" data-owner="${owner||""}" tabindex="${target?"0":"-1"}" role="button" aria-label="${c?.name||"Open"} territory ${q+1}, ${r+1}"></polygon>`;
+          if(state.units[owner]?.[0]===q&&state.units[owner]?.[1]===r) out+=`<circle class="capital" cx="${pos[0]}" cy="${pos[1]}" r="4.3"/>`;
+        }
+        const [x,y]=center(...state.units[state.selected]);
+        out+=`<circle class="commander" cx="${x}" cy="${y}" r="7"/><path class="commander-mark" d="M ${x-3} ${y+2.5} L ${x+3} ${y+2.5} L ${x} ${y-3} Z"/>`;
+        map.innerHTML=out;
+        map.querySelectorAll(".tile").forEach(tile=>{tile.addEventListener("click",()=>applyAction(tile));tile.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();applyAction(tile);}});});
+      }
+
+      function render(){
+        const current=nation(state.selected), pts=state.points[state.selected]||0;
+        document.querySelector("#country-dot").style.background=current.color;
+        document.querySelector("#points").textContent=pts;
+        select.disabled=Boolean(state.hasActed);
+        select.innerHTML=countries.map(c=>`<option value="${c.id}" ${c.id===state.selected?"selected":""}>${c.name}</option>`).join("");
+        document.querySelector("#legend").innerHTML=countries.map(c=>`<div class="legend-item"><span class="swatch" style="background:${c.color}"></span>${c.name}</div>`).join("");
+        document.querySelector("#standings").innerHTML=countries.map(c=>`<div class="standing"><div class="standing-name"><span class="swatch" style="background:${c.color}"></span><span>${c.name}${c.id===state.selected?" · you":""}</span></div><span class="territory">${count(c.id)} HEX</span><span class="balance">${state.points[c.id]||0} PT</span></div>`).join("");
+        document.querySelector("#dispatch").innerHTML=state.events.slice(0,5).map(e=>`<div class="event"><time>${e.time}</time><span>${e.html}</span></div>`).join("");
+        document.querySelector("#instruction").textContent=action?instructions[action]:(pts?"Choose Attack, Move, or Give. Unspent points stay yours.":"No points available. Next point arrives at 5 PM local time.");
+        document.querySelector("#map-note").textContent=action?`${action.toUpperCase()} · ${pts} point available`:"Choose an action, then a territory.";
+        document.querySelectorAll(".action").forEach(button=>{button.classList.toggle("active",button.dataset.action===action);button.setAttribute("aria-pressed",String(button.dataset.action===action));button.disabled=!pts||count(state.selected)===0;});
+        drawMap();
+        const alive=countries.filter(c=>count(c.id)>0);
+        if(alive.length===1){const won=alive[0].id===state.selected;document.querySelector("#result-title").textContent=won?`${alive[0].name} stands alone.`:`${alive[0].name} stands alone.`;document.querySelector("#result-copy").textContent=won?"Your country is the last one standing. The world is yours.":`${alive[0].name} is the last country standing. Your campaign is over.`;document.querySelector("#game-over").classList.add("show");}
+      }
+
+      function event(html){state.events.unshift({time:new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}),html});state.events=state.events.slice(0,12);}
+      function toast(text){const el=document.querySelector("#toast");el.textContent=text;el.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove("show"),2100);}
+      function spend(id){state.points[id]=Math.max(0,(state.points[id]||0)-1);}
+      function applyAction(tile){
+        if(!action)return;
+        const q=Number(tile.dataset.q),r=Number(tile.dataset.r),owner=tile.dataset.owner,from=state.units[state.selected],player=nation(state.selected);
+        if(!state.points[state.selected])return toast("No action points available.");
+        if(action==="attack"){
+          if(owner===state.selected||dist(from,[q,r])>2)return toast("Choose a rival territory within 2 hexes.");
+          const previous=nation(owner);state.owners[key(q,r)]=state.selected;spend(state.selected);state.hasActed=true;event(`<strong>${player.name}</strong> took a territory from <strong>${previous?.name||"the frontier"}</strong>.`);toast("Territory captured.");
+        }else if(action==="move"){
+          if(owner!==state.selected||dist(from,[q,r])!==1)return toast("Move one hex into your own territory.");
+          state.units[state.selected]=[q,r];spend(state.selected);state.hasActed=true;event(`<strong>${player.name}</strong> moved its commander.`);toast("Commander moved.");
+        }else{
+          const recipient=owner&&nation(owner);if(!recipient||owner===state.selected||!state.units[owner]||dist(from,state.units[owner])>2)return toast("Choose a nearby country commander.");
+          state.points[owner]=(state.points[owner]||0)+1;spend(state.selected);state.hasActed=true;event(`<strong>${player.name}</strong> gave 1 point to <strong>${recipient.name}</strong>.`);toast(`1 point sent to ${recipient.name}.`);
+        }
+        action=null;persist();render();
+      }
+
+      function botAct(id){
+        if(!state.points[id]||!count(id))return;
+        const unit=state.units[id],targets=[];
+        for(let r=0;r<H;r++)for(let q=0;q<W;q++)if(state.owners[key(q,r)]!==id&&dist(unit,[q,r])<=2)targets.push([q,r]);
+        if(targets.length){const target=targets[Math.floor(Math.random()*Math.min(3,targets.length))],old=nation(state.owners[key(...target)]);state.owners[key(...target)]=id;spend(id);event(`<strong>${nation(id).name}</strong> captured land from <strong>${old?.name||"the frontier"}</strong>.`);return;}
+        let best=null,score=Infinity;
+        for(let r=0;r<H;r++)for(let q=0;q<W;q++)if(state.owners[key(q,r)]===id){let enemyDistance=Infinity;for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(state.owners[key(x,y)]!==id)enemyDistance=Math.min(enemyDistance,dist([q,r],[x,y]));const d=dist(unit,[q,r]);if(d===1&&enemyDistance<score){score=enemyDistance;best=[q,r];}}
+        if(best){state.units[id]=best;spend(id);event(`<strong>${nation(id).name}</strong> repositioned its commander.`);}
+      }
+
+      function award(now){
+        const today=dateKey(now);if(now.getHours()<17||state.lastAward===today)return;
+        const due=[];
+        if(!state.lastAward)due.push(today);
+        else{
+          const cursor=new Date(`${state.lastAward}T12:00:00`);
+          cursor.setDate(cursor.getDate()+1);
+          while(dateKey(cursor)<=today){due.push(dateKey(cursor));cursor.setDate(cursor.getDate()+1);}
+        }
+        if(!due.length)return;
+        state.hasActed=true;
+        for(const day of due){state.lastAward=day;for(const c of countries){if(count(c.id)===0)continue;state.points[c.id]=(state.points[c.id]||0)+1;if(c.id!==state.selected)botAct(c.id);}}
+        event(due.length===1?"Daily point received. Countries act in real time.":`${due.length} daily points received while away.`);persist();render();toast(due.length===1?"Daily point received.":`${due.length} daily points received.`);
+      }
+      function clock(){const now=new Date(),next=new Date(now);next.setHours(17,0,0,0);if(now>=next)next.setDate(next.getDate()+1);const secs=Math.floor((next-now)/1000);document.querySelector("#countdown").textContent=`${String(Math.floor(secs/3600)).padStart(2,"0")}:${String(Math.floor(secs%3600/60)).padStart(2,"0")}:${String(secs%60).padStart(2,"0")}`;document.querySelector("#local-time").textContent=now.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});award(now);}
+      document.querySelectorAll(".action").forEach(button=>button.addEventListener("click",()=>{if(!state.points[state.selected])return toast("No action points available.");action=action===button.dataset.action?null:button.dataset.action;render();}));
+      select.addEventListener("change",()=>{state.selected=select.value;action=null;persist();render();});
+      document.querySelector("#restart").addEventListener("click",()=>{localStorage.removeItem(STORAGE);location.reload();});
+      world();render();clock();setInterval(clock,1000);
+    })();
+  </script>
+</body>
+</html>
