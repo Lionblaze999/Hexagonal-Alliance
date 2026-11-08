@@ -26,7 +26,7 @@
   <div class="shell">
     <header class="top">
       <div class="brand"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M9 4h14l7 12-7 12H9L2 16Z" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m9 4 7 12-7 12m14-24-7 12 7 12M2 16h28" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>HEXAGONAL ALLIANCE</div>
-      <div class="live"><i></i>Live world</div>
+      <div class="live" id="connection"><i></i>Connecting…</div>
     </header>
     <main>
       <section class="board" aria-label="Game map">
@@ -35,9 +35,9 @@
         <div class="legend" id="legend" aria-label="Country key"></div>
       </section>
       <aside aria-label="Country controls and game status">
-        <div class="identity"><div class="eyebrow">You are leading</div><label class="country-label"><span class="country-dot" id="country-dot"></span><select id="country-select" class="country-select" aria-label="Choose your country"></select></label></div>
+        <div class="identity"><div class="eyebrow">You are leading</div><label class="country-label"><span class="country-dot" id="country-dot"></span><select id="country-select" class="country-select" aria-label="Choose your country"></select></label><button class="restart" id="join" style="width:100%;margin-top:8px">CLAIM THIS COUNTRY</button><p class="instruction" id="identity-info">Choose an unclaimed country to play.</p></div>
         <div class="resource"><div><div class="resource-title">Action points</div><div class="resource-sub">Spend one to act, or hold.</div></div><div class="points"><b></b><span id="points">1</span></div></div>
-        <div class="award"><span>NEXT POINT · LOCAL 5 PM</span><span id="countdown">--:--:--</span></div>
+        <div class="award"><span>NEXT POINT · SERVER 5 PM</span><span id="countdown">--:--:--</span></div>
         <section class="section actions-section"><div class="section-title">Choose an action <span>1 PT EACH</span></div>
           <div class="actions" role="group" aria-label="Choose an action">
             <button class="action" data-action="attack" aria-pressed="false" title="Attack a rival within two hexes"><svg viewBox="0 0 24 24"><path d="M5 19 18.5 5.5M14 5.5h4.5V10M4 13v6h6"/></svg>Attack</button>
@@ -47,134 +47,108 @@
         </section>
         <section class="section"><div class="section-title">Countries <span>LIVE STATUS</span></div><div id="standings"></div></section>
         <section class="section"><div class="section-title">Dispatches <span id="local-time">--:--</span></div><div class="dispatch" id="dispatch"></div></section>
-        <div class="rules">One point arrives at 5 PM local time, daily.<br>The last country with land wins.</div>
+        <div class="rules">One point arrives at 5 PM server time, daily.<br>Each human claims one country. Unclaimed countries use AI.<br>The last country with land wins.</div>
       </aside>
     </main>
   </div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <div id="game-over" class="game-over" role="dialog" aria-modal="true"><div class="result"><div class="eyebrow">The world is decided</div><h2 id="result-title">Victory</h2><p id="result-copy"></p><button class="restart" id="restart">START A NEW WORLD</button></div></div>
+  <div id="game-over" class="game-over" role="dialog" aria-modal="true"><div class="result"><div class="eyebrow">The world is decided</div><h2 id="result-title">Victory</h2><p id="result-copy"></p><p class="rules">Only the server administrator can reset the shared world.</p></div></div>
   <script>
     (() => {
-      const STORAGE = "hexagonal-alliance-v1", W = 20, H = 20, SIZE = 19;
-      const countries = [
-        { id: "portugal", name: "Portugal", home: [2, 3], color: "#39765d" },
-        { id: "japan", name: "Japan", home: [16, 3], color: "#d36d59" },
-        { id: "iceland", name: "Iceland", home: [2, 16], color: "#5577a6" },
-        { id: "kenya", name: "Kenya", home: [16, 16], color: "#c3973f" },
-        { id: "canada", name: "Canada", home: [9, 9], color: "#8a6c9c" }
+      const TOKEN_KEY='hexagonal-alliance-player-token', W=20,H=20,SIZE=19;
+      const countries=[
+        {id:'portugal',name:'Portugal',home:[2,3],color:'#39765d'},
+        {id:'japan',name:'Japan',home:[16,3],color:'#d36d59'},
+        {id:'iceland',name:'Iceland',home:[2,16],color:'#5577a6'},
+        {id:'kenya',name:'Kenya',home:[16,16],color:'#c3973f'},
+        {id:'canada',name:'Canada',home:[9,9],color:'#8a6c9c'}
       ];
-      const instructions = {
-        attack: "Choose a rival territory within 2 hexes of your commander.",
-        move: "Choose your territory one hex from your commander.",
-        give: "Choose a country whose commander is within 2 hexes."
-      };
-      const key = (q, r) => `${q},${r}`;
-      const nation = id => countries.find(item => item.id === id);
-      const dateKey = date => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
-      const dist = (a,b) => { const aq=a[0]-Math.floor(a[1]/2), ar=a[1], bq=b[0]-Math.floor(b[1]/2), br=b[1], dq=aq-bq, dr=ar-br; return (Math.abs(dq)+Math.abs(dr)+Math.abs(dq+dr))/2; };
-      const fresh = () => ({ selected:"japan", hasActed:false, points:Object.fromEntries(countries.map(c=>[c.id,1])), units:Object.fromEntries(countries.map(c=>[c.id,[...c.home]])), owners:{}, lastAward:new Date().getHours()<17?dateKey(new Date()):"", events:[{time:"NOW",html:"The alliance is founded. Five countries enter the world."}] });
-      let state;
-      try { state=JSON.parse(localStorage.getItem(STORAGE)); } catch { state=null; }
-      if (!state || !state.owners || !state.points || !state.units) state=fresh();
-      let action=null, toastTimer;
-      const map=document.querySelector("#map"), select=document.querySelector("#country-select");
-      const persist=()=>localStorage.setItem(STORAGE,JSON.stringify(state));
-      const count=id=>Object.values(state.owners).filter(owner=>owner===id).length;
-
-      function world(){
-        for(let r=0;r<H;r++) for(let q=0;q<W;q++) if(state.owners[key(q,r)]===undefined){
-          let selected=countries[0], best=Infinity;
-          for(let i=0;i<countries.length;i++){const c=countries[i], noise=Math.sin(q*7.31+r*2.17+i*11.4)*.8, value=dist([q,r],c.home)+noise;if(value<best){best=value;selected=c;}}
-          state.owners[key(q,r)]=selected.id;
-        }
-        persist();
+      const instructions={attack:'Choose a rival territory within 2 hexes of your commander.',move:'Choose your territory one hex from your commander.',give:'Choose a country whose commander is within 2 hexes.'};
+      const key=(q,r)=>`${q},${r}`;
+      const nation=id=>countries.find(c=>c.id===id);
+      const dist=(a,b)=>{if(!a||!b)return Infinity;const aq=a[0]-Math.floor(a[1]/2),ar=a[1],bq=b[0]-Math.floor(b[1]/2),br=b[1],dq=aq-bq,dr=ar-br;return (Math.abs(dq)+Math.abs(dr)+Math.abs(dq+dr))/2;};
+      let state=null,player=null,action=null,toastTimer,online=false,joinChoice='japan';
+      let token=localStorage.getItem(TOKEN_KEY)||'';
+      const map=document.querySelector('#map'),select=document.querySelector('#country-select');
+      const count=id=>state?Object.values(state.owners).filter(owner=>owner===id).length:0;
+      async function api(path,body){
+        const res=await fetch(path,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+        const data=await res.json();if(!res.ok)throw Error(data.error||'Request failed');return data;
       }
+      function toast(message){const el=document.querySelector('#toast');el.textContent=message;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2500);}
+      function connection(connected){online=connected;document.querySelector('#connection').innerHTML=`<i style="background:${connected?'#4a9b70':'#bf5c4d'}"></i>${connected?'Shared world connected':'Connection lost'}`;}
       const center=(q,r)=>[26+q*SIZE*1.72+(r%2)*SIZE*.86,23+r*SIZE*1.5];
-      const points=(x,y)=>Array.from({length:6},(_,i)=>{const a=Math.PI/3*i;return `${(x+SIZE*Math.cos(a)).toFixed(2)},${(y+SIZE*Math.sin(a)).toFixed(2)}`;}).join(" ");
-
+      const points=(x,y)=>Array.from({length:6},(_,i)=>{const a=Math.PI/3*i;return `${(x+SIZE*Math.cos(a)).toFixed(2)},${(y+SIZE*Math.sin(a)).toFixed(2)}`;}).join(' ');
       function drawMap(){
-        let out="";
-        for(let r=0;r<H;r++) for(let q=0;q<W;q++){
-          const owner=state.owners[key(q,r)], c=nation(owner), at=[q,r], pos=center(q,r), unit=state.units[state.selected], range=dist(unit,at)<=2;
-          const move=action==="move"&&owner===state.selected&&dist(unit,at)===1;
-          const attack=action==="attack"&&owner!==state.selected&&range;
-          const give=action==="give"&&owner!==state.selected&&state.units[owner]&&dist(unit,state.units[owner])<=2;
+        if(!state)return;
+        let out='';
+        for(let r=0;r<H;r++)for(let q=0;q<W;q++){
+          const owner=state.owners[key(q,r)],c=nation(owner),at=[q,r],pos=center(q,r),unit=state.units[player],range=dist(unit,at)<=2;
+          const move=player&&action==='move'&&owner===player&&dist(unit,at)===1;
+          const attack=player&&action==='attack'&&owner!==player&&range;
+          const give=player&&action==='give'&&owner!==player&&state.units[owner]&&dist(unit,state.units[owner])<=2;
           const target=move||attack||give;
-          out+=`<polygon class="tile ${range&&action?"range":""} ${action&&!target?"disabled":""} ${target?"target":""}" points="${points(...pos)}" fill="${c?.color||"#dfe7df"}" data-q="${q}" data-r="${r}" data-owner="${owner||""}" tabindex="${target?"0":"-1"}" role="button" aria-label="${c?.name||"Open"} territory ${q+1}, ${r+1}"></polygon>`;
-          if(state.units[owner]?.[0]===q&&state.units[owner]?.[1]===r) out+=`<circle class="capital" cx="${pos[0]}" cy="${pos[1]}" r="4.3"/>`;
+          out+=`<polygon class="tile ${range&&action?'range':''} ${action&&!target?'disabled':''} ${target?'target':''}" points="${points(...pos)}" fill="${c?.color||'#dfe7df'}" data-q="${q}" data-r="${r}" tabindex="${target?'0':'-1'}" role="button" aria-label="${c?.name||'Open'} territory ${q+1}, ${r+1}"></polygon>`;
+          if(state.units[owner]?.[0]===q&&state.units[owner]?.[1]===r)out+=`<circle class="capital" cx="${pos[0]}" cy="${pos[1]}" r="4.3"/>`;
         }
-        const [x,y]=center(...state.units[state.selected]);
-        out+=`<circle class="commander" cx="${x}" cy="${y}" r="7"/><path class="commander-mark" d="M ${x-3} ${y+2.5} L ${x+3} ${y+2.5} L ${x} ${y-3} Z"/>`;
+        if(player&&state.units[player]){const [x,y]=center(...state.units[player]);out+=`<circle class="commander" cx="${x}" cy="${y}" r="7"/><path class="commander-mark" d="M ${x-3} ${y+2.5} L ${x+3} ${y+2.5} L ${x} ${y-3} Z"/>`;}
         map.innerHTML=out;
-        map.querySelectorAll(".tile").forEach(tile=>{tile.addEventListener("click",()=>applyAction(tile));tile.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();applyAction(tile);}});});
+        map.querySelectorAll('.tile').forEach(tile=>{tile.addEventListener('click',()=>applyAction(tile));tile.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();applyAction(tile);}});});
       }
-
       function render(){
-        const current=nation(state.selected), pts=state.points[state.selected]||0;
-        document.querySelector("#country-dot").style.background=current.color;
-        document.querySelector("#points").textContent=pts;
-        select.disabled=Boolean(state.hasActed);
-        select.innerHTML=countries.map(c=>`<option value="${c.id}" ${c.id===state.selected?"selected":""}>${c.name}</option>`).join("");
-        document.querySelector("#legend").innerHTML=countries.map(c=>`<div class="legend-item"><span class="swatch" style="background:${c.color}"></span>${c.name}</div>`).join("");
-        document.querySelector("#standings").innerHTML=countries.map(c=>`<div class="standing"><div class="standing-name"><span class="swatch" style="background:${c.color}"></span><span>${c.name}${c.id===state.selected?" · you":""}</span></div><span class="territory">${count(c.id)} HEX</span><span class="balance">${state.points[c.id]||0} PT</span></div>`).join("");
-        document.querySelector("#dispatch").innerHTML=state.events.slice(0,5).map(e=>`<div class="event"><time>${e.time}</time><span>${e.html}</span></div>`).join("");
-        document.querySelector("#instruction").textContent=action?instructions[action]:(pts?"Choose Attack, Move, or Give. Unspent points stay yours.":"No points available. Next point arrives at 5 PM local time.");
-        document.querySelector("#map-note").textContent=action?`${action.toUpperCase()} · ${pts} point available`:"Choose an action, then a territory.";
-        document.querySelectorAll(".action").forEach(button=>{button.classList.toggle("active",button.dataset.action===action);button.setAttribute("aria-pressed",String(button.dataset.action===action));button.disabled=!pts||count(state.selected)===0;});
+        if(!state)return;
+        const pts=state.points[player]||0,chosen=player||joinChoice;
+        document.querySelector('#country-dot').style.background=nation(chosen)?.color||'#ccc';
+        document.querySelector('#points').textContent=player?pts:'—';
+        select.disabled=Boolean(player);
+        select.innerHTML=countries.map(c=>`<option value="${c.id}" ${c.id===chosen?'selected':''} ${!player&&state.claimed.includes(c.id)?'disabled':''}>${c.name}${state.claimed.includes(c.id)?' · claimed':''}</option>`).join('');
+        document.querySelector('#join').style.display=player?'none':'block';
+        document.querySelector('#join').disabled=!online||state.claimed.includes(chosen)||count(chosen)===0;
+        document.querySelector('#identity-info').textContent=player?`You control ${nation(player).name}. Your identity is stored in this browser.`:'Select an unclaimed country, then claim it.';
+        document.querySelector('#legend').innerHTML=countries.map(c=>`<div class="legend-item"><span class="swatch" style="background:${c.color}"></span>${c.name}</div>`).join('');
+        document.querySelector('#standings').innerHTML=countries.map(c=>`<div class="standing"><div class="standing-name"><span class="swatch" style="background:${c.color}"></span><span>${c.name}${c.id===player?' · you':''}${state.claimed.includes(c.id)?' · human':' · AI'}</span></div><span class="territory">${count(c.id)} HEX</span><span class="balance">${state.points[c.id]||0} PT</span></div>`).join('');
+        document.querySelector('#dispatch').innerHTML=state.events.slice(0,5).map(e=>`<div class="event"><time>${e.time}</time><span>${e.html}</span></div>`).join('');
+        document.querySelector('#instruction').textContent=!player?'Claim a country to begin.':action?instructions[action]:(pts?'Choose Attack, Move, or Give. Unspent points stay yours.':'No points available. Next point arrives at server 5 PM.');
+        document.querySelector('#map-note').textContent=action?`${action.toUpperCase()} · ${pts} points available`:'Choose an action, then a territory.';
+        document.querySelectorAll('.action').forEach(button=>{button.classList.toggle('active',button.dataset.action===action);button.setAttribute('aria-pressed',String(button.dataset.action===action));button.disabled=!player||!online||!pts||count(player)===0;});
         drawMap();
         const alive=countries.filter(c=>count(c.id)>0);
-        if(alive.length===1){const won=alive[0].id===state.selected;document.querySelector("#result-title").textContent=won?`${alive[0].name} stands alone.`:`${alive[0].name} stands alone.`;document.querySelector("#result-copy").textContent=won?"Your country is the last one standing. The world is yours.":`${alive[0].name} is the last country standing. Your campaign is over.`;document.querySelector("#game-over").classList.add("show");}
+        document.querySelector('#game-over').classList.toggle('show',alive.length===1);
+        if(alive.length===1){document.querySelector('#result-title').textContent=`${alive[0].name} stands alone.`;document.querySelector('#result-copy').textContent=alive[0].id===player?'Your country is the last one standing. The world is yours.':`${alive[0].name} is the last country standing. The campaign is over.`;}
       }
-
-      function event(html){state.events.unshift({time:new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}),html});state.events=state.events.slice(0,12);}
-      function toast(text){const el=document.querySelector("#toast");el.textContent=text;el.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove("show"),2100);}
-      function spend(id){state.points[id]=Math.max(0,(state.points[id]||0)-1);}
-      function applyAction(tile){
-        if(!action)return;
-        const q=Number(tile.dataset.q),r=Number(tile.dataset.r),owner=tile.dataset.owner,from=state.units[state.selected],player=nation(state.selected);
-        if(!state.points[state.selected])return toast("No action points available.");
-        if(action==="attack"){
-          if(owner===state.selected||dist(from,[q,r])>2)return toast("Choose a rival territory within 2 hexes.");
-          const previous=nation(owner);state.owners[key(q,r)]=state.selected;spend(state.selected);state.hasActed=true;event(`<strong>${player.name}</strong> took a territory from <strong>${previous?.name||"the frontier"}</strong>.`);toast("Territory captured.");
-        }else if(action==="move"){
-          if(owner!==state.selected||dist(from,[q,r])!==1)return toast("Move one hex into your own territory.");
-          state.units[state.selected]=[q,r];spend(state.selected);state.hasActed=true;event(`<strong>${player.name}</strong> moved its commander.`);toast("Commander moved.");
-        }else{
-          const recipient=owner&&nation(owner);if(!recipient||owner===state.selected||!state.units[owner]||dist(from,state.units[owner])>2)return toast("Choose a nearby country commander.");
-          state.points[owner]=(state.points[owner]||0)+1;spend(state.selected);state.hasActed=true;event(`<strong>${player.name}</strong> gave 1 point to <strong>${recipient.name}</strong>.`);toast(`1 point sent to ${recipient.name}.`);
-        }
-        action=null;persist();render();
+      async function applyAction(tile){
+        if(!action||!player||!online)return;
+        const kind=action,q=Number(tile.dataset.q),r=Number(tile.dataset.r);
+        action=null;render();
+        try{const result=await api('/api/action',{token,action:kind,q,r});toast(result.message);}catch(e){toast(e.message);}
       }
-
-      function botAct(id){
-        if(!state.points[id]||!count(id))return;
-        const unit=state.units[id],targets=[];
-        for(let r=0;r<H;r++)for(let q=0;q<W;q++)if(state.owners[key(q,r)]!==id&&dist(unit,[q,r])<=2)targets.push([q,r]);
-        if(targets.length){const target=targets[Math.floor(Math.random()*Math.min(3,targets.length))],old=nation(state.owners[key(...target)]);state.owners[key(...target)]=id;spend(id);event(`<strong>${nation(id).name}</strong> captured land from <strong>${old?.name||"the frontier"}</strong>.`);return;}
-        let best=null,score=Infinity;
-        for(let r=0;r<H;r++)for(let q=0;q<W;q++)if(state.owners[key(q,r)]===id){let enemyDistance=Infinity;for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(state.owners[key(x,y)]!==id)enemyDistance=Math.min(enemyDistance,dist([q,r],[x,y]));const d=dist(unit,[q,r]);if(d===1&&enemyDistance<score){score=enemyDistance;best=[q,r];}}
-        if(best){state.units[id]=best;spend(id);event(`<strong>${nation(id).name}</strong> repositioned its commander.`);}
+      async function join(){
+        if(!online||player)return;
+        const chosen=select.value;
+        try{const result=await api('/api/join',{country:chosen});token=result.token;localStorage.setItem(TOKEN_KEY,token);player=result.country;action=null;toast(`You now control ${nation(player).name}.`);render();}catch(e){toast(e.message);}
       }
-
-      function award(now){
-        const today=dateKey(now);if(now.getHours()<17||state.lastAward===today)return;
-        const due=[];
-        if(!state.lastAward)due.push(today);
-        else{
-          const cursor=new Date(`${state.lastAward}T12:00:00`);
-          cursor.setDate(cursor.getDate()+1);
-          while(dateKey(cursor)<=today){due.push(dateKey(cursor));cursor.setDate(cursor.getDate()+1);}
-        }
-        if(!due.length)return;
-        state.hasActed=true;
-        for(const day of due){state.lastAward=day;for(const c of countries){if(count(c.id)===0)continue;state.points[c.id]=(state.points[c.id]||0)+1;if(c.id!==state.selected)botAct(c.id);}}
-        event(due.length===1?"Daily point received. Countries act in real time.":`${due.length} daily points received while away.`);persist();render();toast(due.length===1?"Daily point received.":`${due.length} daily points received.`);
+      async function bootstrap(){
+        try{
+          const res=await fetch('/api/state',{cache:'no-store'});if(!res.ok)throw Error('Cannot load world');state=await res.json();connection(true);
+          if(token){const result=await api('/api/identity',{token});if(result.country)player=result.country;else{token='';localStorage.removeItem(TOKEN_KEY);}}
+          if(!player&&state.claimed.includes(joinChoice))joinChoice=countries.find(c=>!state.claimed.includes(c.id)&&count(c.id)>0)?.id||joinChoice;
+          render();
+        }catch(e){connection(false);toast(e.message);}
+        const events=new EventSource('/api/events');
+        events.onmessage=e=>{try{state=JSON.parse(e.data);connection(true);render();}catch(err){console.error(err);}};
+        events.onerror=()=>{connection(false);render();};
       }
-      function clock(){const now=new Date(),next=new Date(now);next.setHours(17,0,0,0);if(now>=next)next.setDate(next.getDate()+1);const secs=Math.floor((next-now)/1000);document.querySelector("#countdown").textContent=`${String(Math.floor(secs/3600)).padStart(2,"0")}:${String(Math.floor(secs%3600/60)).padStart(2,"0")}:${String(secs%60).padStart(2,"0")}`;document.querySelector("#local-time").textContent=now.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});award(now);}
-      document.querySelectorAll(".action").forEach(button=>button.addEventListener("click",()=>{if(!state.points[state.selected])return toast("No action points available.");action=action===button.dataset.action?null:button.dataset.action;render();}));
-      select.addEventListener("change",()=>{state.selected=select.value;action=null;persist();render();});
-      document.querySelector("#restart").addEventListener("click",()=>{localStorage.removeItem(STORAGE);location.reload();});
-      world();render();clock();setInterval(clock,1000);
+      function clock(){
+        const now=new Date();document.querySelector('#local-time').textContent=now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+        // Countdown is approximate if browser and server timezones differ; the server decides awards.
+        const next=new Date(now);next.setHours(17,0,0,0);if(now>=next)next.setDate(next.getDate()+1);
+        const secs=Math.floor((next-now)/1000);
+        document.querySelector('#countdown').textContent=`${String(Math.floor(secs/3600)).padStart(2,'0')}:${String(Math.floor(secs%3600/60)).padStart(2,'0')}:${String(secs%60).padStart(2,'0')}`;
+      }
+      document.querySelectorAll('.action').forEach(button=>button.addEventListener('click',()=>{if(!player||!online||!state.points[player])return;action=action===button.dataset.action?null:button.dataset.action;render();}));
+      select.addEventListener('change',()=>{if(player)return;joinChoice=select.value;render();});
+      document.querySelector('#join').addEventListener('click',join);
+      clock();setInterval(clock,1000);bootstrap();
     })();
   </script>
 </body>
